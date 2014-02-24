@@ -1,0 +1,33 @@
+{
+  "name": "represent",
+  "version": "0.0.1",
+  "description": "Make your Node app representational.",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js port:5002"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ijoey/represent.git"
+  },
+  "keywords": [
+    "REST",
+    "javascript",
+	"node",
+	"representational"
+  ],
+  "author": "Joey Guerra",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ijoey/represent/issues"
+  },
+  "homepage": "https://github.com/ijoey/represent",
+  "dependencies": {
+    "graceful-fs": "*",
+    "mime": "*",
+    "cookies": "*",
+    "keygrip": "*",
+    "ejs": "*",
+    "moment": "*"
+  }
+}
