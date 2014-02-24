@@ -1,6 +1,7 @@
+var libPath = __dirname.replace('examples/web', '');
 var port = process.env.PORT;
-var Represent = require('./lib/represent');
-var Resource = require('./lib/resource');
+var Represent = require(libPath + 'lib/represent');
+var Resource = require(libPath + 'lib/resource');
 var appPath = __dirname;
 var Fs = require('fs');
 var resourcesFolder = appPath + '/resources';
@@ -12,7 +13,7 @@ process.argv.forEach(function(value, fileName, args){
 	if(/port:/.test(value)) process.env.PORT = /port:(\d+)/.exec(value)[1];
 });
 
-var web = require('./server.js');
+var web = require(libPath + '/server.js');
 if(process.env.PORT) web.port = process.env.PORT;
 web.server.listen(web.port, web.listeners.listening);
 process.on('uncaughtException', function(err){
@@ -33,7 +34,8 @@ process.on('SIGTERM', function(){
 });
 Represent.appPath = appPath;
 Represent.themeRoot = appPath + '/themes/' + process.env.THEME;
-Represent.contenTypesFolder = appPath + '/lib/contentTypes';
+Represent.templatesRoot = Represent.themeRoot + '/templates/';
+Represent.contenTypesFolder = libPath + 'lib/contentTypes';
 // Load available content type handlers.
 Fs.readdirSync(Represent.contenTypesFolder).forEach(function(file) {
 	var contentType = require(Represent.contenTypesFolder + "/" + file);

@@ -4,7 +4,7 @@
   "description": "Make your Node app representational.",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon app.js port:5002"
+    "start": "nodemon examples/web/app.js port:5002"
   },
   "repository": {
     "type": "git",

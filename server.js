@@ -42,7 +42,6 @@ var web = (function(){
 			
 		}
 	};
-	var routeHandlers = [];
 	var api = {
 		listeners: listeners
 		, port: 5000
