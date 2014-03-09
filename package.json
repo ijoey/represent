@@ -2,7 +2,7 @@
   "name": "represent",
   "version": "0.0.1",
   "description": "Make your Node app representational.",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "start": "nodemon examples/web/app.js port:5002"
   },
