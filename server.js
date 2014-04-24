@@ -1,22 +1,22 @@
 var Http = require('http');
 var port = process.env.PORT;
 var Domain = require('domain');
+var hooks = [];
 module.exports = {
 	request: function(request, response){
-		var i = 0, ubounds = this.hooks.length;
-		var self = this;
+		var i = 0, ubounds = hooks.length;
 		function executeHook(hook){
 			if(!hook) return;
 			if(hook.handles(request)){
 				hook.execute(request, response, function(err){
 					if(err) console.log(err);
-					executeHook(self.hooks[i++]);
+					executeHook(hooks[i++]);
 				});
 			} else {
-				executeHook(self.hooks[i++]);
+				executeHook(hooks[i++]);
 			}
 		}
-		executeHook(this.hooks[i]);
+		executeHook(hooks[i]);
 	}
 	, connection: function(socket){
 		console.log('socket connection happened');
@@ -58,7 +58,7 @@ module.exports = {
 		d.add(request);
 		d.add(response);
 	}
-	, hooks: []
+	, hooks: hooks
 };
 /*
 //Do this to setup the web server.
