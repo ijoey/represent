@@ -25,8 +25,7 @@ function InMemoryStream(source) {
             setImmediate(arguments.callee);
         }
     });
-    if (source instanceof Stream)source.pipe(this);
-    else this.end(source);
+    if (source instanceof Stream) source.pipe(this);
 };
 util.inherits(InMemoryStream, Stream);
 InMemoryStream.prototype.setEncoding = function setEncoding(encoding) {
@@ -45,7 +44,7 @@ InMemoryStream.prototype.write = function write(chunk) {
     this._chunks.push(chunk);
 };
 InMemoryStream.prototype.end = function end(chunk) {
-    if (chunk) this.write(chunk); 
+    if (chunk) this.write(chunk);
     var self = this;
     this.destroySoon(function () {
         self.emit("end");
