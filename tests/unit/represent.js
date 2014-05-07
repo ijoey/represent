@@ -14,12 +14,20 @@ Fs.readdirSync(Represent.contenTypesFolder).forEach(function(file) {
 Web.hooks.push(require(root + '/lib/hook'));
 var PostsResource = {
     handles: function(request){
-        return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'get') return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'post') return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'delete') return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'put') return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'options') return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'trace') return /^\/posts(.*)/.test(request.url);
+        if(request.method.toLowerCase() === 'head') return /^\/posts(.*)/.test(request.url);
+        return false;
     }
     , get: function(request, response, callback){
         callback({resource: this, model: {"id":1, "title":"Test post", "content":"This is the content for a test post", "published":new Date()}});
     }
     , post: function(request, response, callback){
+        response.statusCode = 201;
         callback({resource: this, model: {"id":2, "title":"Test post", "content":"This is the content for a test post", "published":new Date()}});
     }
     , getTemplateFor: function(request){
@@ -70,7 +78,7 @@ function postRequest(){
     var response = mockResponse();
     Represent.endpoints.post.push(PostsResource);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
+    Assert.equal(response.statusCode, 201);
     Assert.equal(response.headers['Content-Type'], 'text/html', "Should be HTML: " + response.headers['Content-Type']);
 }
 function shouldBeInHtml(){

@@ -3,7 +3,7 @@ module.exports = function Index(endpoints){
 	var self = new Resource();
 	self.title = "Representational Web Site";
 	endpoints.get.push({handles: function(request){ return /^\/(index)?(\..*)?$/.test(request.url);}
-		, execute: function(request, response, callback){
+		, get: function(request, response, callback){
 			callback({
 				resource: self
 				, model: [
