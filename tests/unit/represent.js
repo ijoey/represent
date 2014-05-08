@@ -32,6 +32,7 @@ var Resource = function(endpoints){
       , header: self.header
       , layout: self.layout
   });
+  
   endpoints.post.push({
     handles: function(request){
       return /^\/posts(.*)/.test(request.url);
@@ -43,7 +44,7 @@ var Resource = function(endpoints){
     , getTemplateFor: self.getTemplateFor
     , header: self.header
     , layout: self.layout
-  })
+  });
 };
 describe('GIVEN that I am a user', function(){
     it('WHEN I include a file extension in the URL with query params, THEN the response content type should be correct for the file extension', shouldMatchUrlExtensionWithQueryParams);
