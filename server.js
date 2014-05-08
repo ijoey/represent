@@ -2,6 +2,7 @@ var Http = require('http');
 var port = process.env.PORT;
 var Domain = require('domain');
 var hooks = [];
+var filters = [];
 module.exports = {
 	request: function(request, response){
 		var i = 0, ubounds = hooks.length;
@@ -25,16 +26,16 @@ module.exports = {
 		console.log('close happened', arguments);
 	}
 	, connect: function(request, socket, head){
-		
+
 	}
 	, upgrade: function(request, socket, head){
-		
+
 	}
 	, clientError: function(exception, socket){
-		
+
 	}
 	, listening: function(){
-		
+
 	}
 	, port: 5000
 	, filter: function filter(request, response){
@@ -57,8 +58,13 @@ module.exports = {
 		});
 		d.add(request);
 		d.add(response);
+		if(filters.length === 0) return;
+		filters.forEach(function(filter){
+			filter(request, response);
+		});
 	}
 	, hooks: hooks
+	, filters: filters
 };
 /*
 //Do this to setup the web server.

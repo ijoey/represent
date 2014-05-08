@@ -57,6 +57,31 @@ Web.server = Http.createServer(Web.filter);
 	});
 })();
 
+(function addCookieFilter(){
+	Web.filters.push(function(request, response){
+		response.setCookie = function(key, value, options){
+			var cookieHeader = this.getHeader("Set-Cookie") || [];
+			cookieHeader.push(key + "=" + value);
+			this.setHeader("Set-Cookie", cookieHeader);
+		}
+	});
+})();
+(function addCookieParsingHook(){
+	Web.hooks.push({
+		handles: function(request) {return true;}
+		, execute: function(request, response, next){
+			if(!request.headers.cookie) return next();
+			var cookie = decodeURIComponent(request.headers.cookie);
+			var pairs = cookie.split(';');
+			request.cookie = {};
+			for(var i = 0; i < pairs.length; i++){
+				var kv = pairs[i].split('=');
+				request.cookie[kv[0]] = kv[1];
+			}
+			next();
+		}
+	});
+})();
 (function addStaticServerHook(){
 	Web.hooks.push({
 		handles: function(request){
@@ -64,12 +89,12 @@ Web.server = Http.createServer(Web.filter);
 		}
 		, execute: function staticServer(request, response, next){
 			var path = appPath + '/themes/' + process.env.THEME + request.url.replace('/public', '');
-			Fs.exists(path, function(exists){			
+			Fs.exists(path, function(exists){
 				if(!exists) return next();
 				var parsed = Url.parse(request.url, true, true);
 				var ext = Path.extname(parsed.pathname);
 				var contentType = Mime.lookup(ext);
-				response.writeHead(200, {'Content-Type':contentType});			
+				response.writeHead(200, {'Content-Type':contentType});
 				Fs.createReadStream(path).pipe(response);
 			});
 		}

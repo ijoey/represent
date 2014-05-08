@@ -55,10 +55,14 @@ describe('GIVEN that I am a browser', function(){
     it("WHEN I request posts, THEN the response Content-Type is HTML AND I get a list of posts", requestPostsInHtml);
     it("WHEN I send a POST request, THEN I get a 200 response", postRequest);
 });
+describe('GIVEN that I am the server', function(){
+  it("WHEN I set a cookie value foo=bar in the response, THEN the response cookie object has foo = bar", fooBarCookie);
+});
 function mockResponse(){
     var response = new InMemoryStream();
     response.headersSent = false;
     response.headers = {};
+    response.cookies = {};
     response.setHeader = function setHeader(k, v){
         this.headers[k] = v;
     };
@@ -80,6 +84,24 @@ function postRequest(){
     Web.request(request, response);
     Assert.equal(response.statusCode, 201);
     Assert.equal(response.headers['Content-Type'], 'text/html', "Should be HTML: " + response.headers['Content-Type']);
+}
+function fooBarCookie(){
+  var request = new InMemoryStream();
+  request.url = "/posts";
+  request.headers = {};
+  request.method = "get";
+  var response = mockResponse();
+  var output = '';
+  response.cookies['foo'] = 'bar';
+  response.on('data', function(buffer){
+      output += buffer.toString();
+  });
+  response.on('end', function(){
+      Assert.equal(this.statusCode, 200);
+      Assert.equal(this.cookies['foo'], 'bar', "foo should = bar");
+  });
+  Represent.endpoints.get.push(PostsResource);
+  Web.request(request, response);
 }
 function shouldBeInHtml(){
     var request = new InMemoryStream();
@@ -179,7 +201,7 @@ function requestPostsInHtml(){
     Assert(response.statusCode === 404);
 }
 
-function notFoundRequest(){    
+function notFoundRequest(){
     var request = new InMemoryStream();
     request.url = "/notfound.html";
     request.method = "get";
@@ -206,4 +228,3 @@ function notFoundHtmlRequestWithQueryString(){
     Web.request(request, response);
     Assert.equal(response.headers["Content-Type"], "text/html");
 }
-

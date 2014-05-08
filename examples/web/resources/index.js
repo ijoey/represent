@@ -4,6 +4,7 @@ module.exports = function Index(endpoints){
 	self.title = "Representational Web Site";
 	endpoints.get.push({handles: function(request){ return /^\/(index)?(\..*)?$/.test(request.url);}
 		, get: function(request, response, callback){
+			response.setCookie('testingthiscookie', 23);
 			callback({
 				resource: self
 				, model: [
