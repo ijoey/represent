@@ -12,29 +12,38 @@ Fs.readdirSync(Represent.contenTypesFolder).forEach(function(file) {
     Represent.contentTypes[contentType.key] = contentType;
 });
 Web.hooks.push(require(root + '/lib/hook'));
-var PostsResource = {
-    handles: function(request){
-        if(request.method.toLowerCase() === 'get') return /^\/posts(.*)/.test(request.url);
-        if(request.method.toLowerCase() === 'post') return /^\/posts(.*)/.test(request.url);
-        if(request.method.toLowerCase() === 'delete') return /^\/posts(.*)/.test(request.url);
-        if(request.method.toLowerCase() === 'put') return /^\/posts(.*)/.test(request.url);
-        if(request.method.toLowerCase() === 'options') return /^\/posts(.*)/.test(request.url);
-        if(request.method.toLowerCase() === 'trace') return /^\/posts(.*)/.test(request.url);
-        if(request.method.toLowerCase() === 'head') return /^\/posts(.*)/.test(request.url);
-        return false;
-    }
-    , get: function(request, response, callback){
-        callback({resource: this, model: {"id":1, "title":"Test post", "content":"This is the content for a test post", "published":new Date()}});
-    }
-    , post: function(request, response, callback){
-        response.statusCode = 201;
-        callback({resource: this, model: {"id":2, "title":"Test post", "content":"This is the content for a test post", "published":new Date()}});
-    }
-    , getTemplateFor: function(request){
-        return "posts";
-    }
-    , header: {}
+var Resource = function(endpoints){
+  var self = {
+    header: {}
     , layout: 'default'
+    , getTemplateFor: function(request){
+      return 'posts';
+    }
+  };
+
+  endpoints.get.push({
+      handles: function(request){
+        return /^\/posts(.*)/.test(request.url);
+      }
+      , execute: function(request, response, callback){
+        callback({resource: this, model: {"id":1, "title":"Test post", "content":"This is the content for a test post", "published":new Date()}});
+      }
+      , getTemplateFor: self.getTemplateFor
+      , header: self.header
+      , layout: self.layout
+  });
+  endpoints.post.push({
+    handles: function(request){
+      return /^\/posts(.*)/.test(request.url);
+    }
+    , execute: function(request, response, callback){
+      response.statusCode = 201;
+      callback({resource: this, model: {"id":1, "title":"Test post", "content":"This is the content for a test post", "published":new Date()}});
+    }
+    , getTemplateFor: self.getTemplateFor
+    , header: self.header
+    , layout: self.layout
+  })
 };
 describe('GIVEN that I am a user', function(){
     it('WHEN I include a file extension in the URL with query params, THEN the response content type should be correct for the file extension', shouldMatchUrlExtensionWithQueryParams);
@@ -53,7 +62,7 @@ describe('GIVEN that I am a browser', function(){
     it("WHEN I send a request for a resource with an html file extension, THEN the response Content-Type is text/html", notFoundHtmlRequest);
     it("WHEN I send a request for a resource with an html file extension AND a query string, THEN the response Content-Type is still text/html", notFoundHtmlRequestWithQueryString);
     it("WHEN I request posts, THEN the response Content-Type is HTML AND I get a list of posts", requestPostsInHtml);
-    it("WHEN I send a POST request, THEN I get a 200 response", postRequest);
+    it("WHEN I send a POST request, THEN I get a 201 response", postRequest);
 });
 describe('GIVEN that I am the server', function(){
   it("WHEN I set a cookie value foo=bar in the response, THEN the response cookie object has foo = bar", fooBarCookie);
@@ -80,7 +89,7 @@ function postRequest(){
     request.url = "/posts.html";
     request.method = "post";
     var response = mockResponse();
-    Represent.endpoints.post.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 201);
     Assert.equal(response.headers['Content-Type'], 'text/html', "Should be HTML: " + response.headers['Content-Type']);
@@ -100,7 +109,7 @@ function fooBarCookie(){
       Assert.equal(this.statusCode, 200);
       Assert.equal(this.cookies['foo'], 'bar', "foo should = bar");
   });
-  Represent.endpoints.get.push(PostsResource);
+  Resource(Represent.endpoints);
   Web.request(request, response);
 }
 function shouldBeInHtml(){
@@ -118,7 +127,7 @@ function shouldBeInHtml(){
         Assert.equal(this.headers['Content-Type'], 'text/html', "should be HTML");
         Assert(/\<html\>/.test(output), "Should contain \<html\>");
     });
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
 }
 function shouldMatchUrlExtensionWithQueryParams(){
@@ -126,7 +135,7 @@ function shouldMatchUrlExtensionWithQueryParams(){
     request.url = "/posts.json?test=1";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert.equal(response.headers['Content-Type'], 'application/json', "Should be JSON: " + response.headers['Content-Type']);
@@ -136,7 +145,7 @@ function shouldReturnJsonContentType(){
     request.url = "/posts.json";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert(response.headers['Content-Type'] === 'application/json', "Should be JSON");
@@ -146,7 +155,7 @@ function shouldReturnHtmlContentType(){
     request.url = "/posts.html";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert(response.headers['Content-Type'] === 'text/html', "Should be HTML");
@@ -156,7 +165,7 @@ function shouldReturnPartialHtmlContentType(){
     request.url = "/posts.phtml";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert(response.headers['Content-Type'] === 'text/html', "Should be HTML");
@@ -166,7 +175,7 @@ function shouldReturnXmlContentType(){
     request.url = "/posts.xml";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert(response.headers['Content-Type'] === 'application/xml', "Should be XML");
@@ -176,7 +185,7 @@ function shouldBeAtomContentType(){
     request.url = "/posts.atom";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert(response.headers['Content-Type'] === 'application/atom+xml', "Should be ATOM+XML");
@@ -186,7 +195,7 @@ function shouldBeRssContentType(){
     request.url = "/posts.rss";
     request.method = "get";
     var response = mockResponse();
-    Represent.endpoints.get.push(PostsResource);
+    Resource(Represent.endpoints);
     Web.request(request, response);
     Assert.equal(response.statusCode, 200);
     Assert(response.headers['Content-Type'] === 'application/rss+xml', "Should be RSS+XML");
