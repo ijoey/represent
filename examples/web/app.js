@@ -9,6 +9,7 @@ var Url = require('url');
 var Path = require('path');
 var Mime = require('mime');
 var Http = require('http');
+var represent = null;
 if(!process.env.THEME) process.env.THEME = "default";
 process.argv.forEach(function(value, fileName, args){
 	if(/port:/.test(value)) process.env.PORT = /port:(\d+)/.exec(value)[1];
@@ -41,19 +42,12 @@ Web.server = Http.createServer(Web.filter);
 })();
 
 (function configureRepresent(){
-	Represent.appPath = appPath;
-	Represent.themeRoot = appPath + '/themes/' + process.env.THEME;
-	Represent.templatesRoot = Represent.themeRoot + '/templates/';
-	Represent.contenTypesFolder = libPath + 'lib/contentTypes';
-	Fs.readdirSync(Represent.contenTypesFolder).forEach(function(file) {
-	    var contentType = require(Represent.contenTypesFolder + "/" + file);
-	    Represent.contentTypes[contentType.key] = contentType;
-	});
+	represent = Represent({appPath: appPath, themeRoot: appPath + '/themes/' + process.env.THEME})
 })();
 
 (function loadResourcesFromFolder(){
 	Fs.readdirSync(resourcesFolder).forEach(function(file) {
-		require(resourcesFolder + "/" + file)(Represent.endpoints);
+		require(resourcesFolder + "/" + file)(represent.endpoints);
 	});
 })();
 
@@ -100,5 +94,5 @@ Web.server = Http.createServer(Web.filter);
 		}
 	});
 })();
-Web.hooks.push(require(libPath + 'lib/hook'));
+Web.hooks.push(require(libPath + 'lib/hook')(represent));
 Web.server.listen(Web.port, Web.listening);
