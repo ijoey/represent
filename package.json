@@ -4,7 +4,8 @@
   "description": "Make your Node app representational.",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon examples/web/app.js port:5002"
+    "start": "nodemon examples/web/app.js port:5002",
+	"test":"tap ./tests/unit --stderr --tap"
   },
   "repository": {
     "type": "git",
@@ -14,7 +15,9 @@
     "REST",
     "javascript",
 	"node",
-	"representational"
+	"representational",
+	"content",
+	"negotiation"
   ],
   "author": "Joey Guerra",
   "license": "MIT",
@@ -22,6 +25,9 @@
     "url": "https://github.com/ijoey/represent/issues"
   },
   "homepage": "https://github.com/ijoey/represent",
+  "devDependencies": {
+	   "tap":"*"
+  },
   "dependencies": {
     "graceful-fs": "*",
     "mime": "*",

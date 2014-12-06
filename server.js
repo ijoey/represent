@@ -1,4 +1,3 @@
-var Http = require('http');
 var port = process.env.PORT;
 var Domain = require('domain');
 var hooks = [];
@@ -68,6 +67,7 @@ module.exports = {
 };
 /*
 //Do this to setup the web server.
+var Http = require('http');
 web.server = Http.createServer(web.filter);
 ['request', 'connection', 'close', 'checkContinue', 'connect', 'upgrade', 'clientError'].forEach(function(event){
 	if(web[event]) web.server.on(event, web[event]);

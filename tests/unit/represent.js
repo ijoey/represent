@@ -1,18 +1,23 @@
 var Assert = require('assert');
 var root = __dirname.replace('/tests/unit', '');
 var Web = require(root + '/server');
-var InMemoryStream = require(root + '/tests/stream');
+var InMemoryStream = require(root + '/tests/inmemorystream');
 var Fs = require('fs');
-var Represent = require(root + '/index').Represent;
-Represent.contenTypesFolder = root + '/lib/contentTypes';
-Represent.templatesRoot = root + '/tests/default/';
-Represent.layoutRoot = root + '/tests/default/';
-Fs.readdirSync(Represent.contenTypesFolder).forEach(function(file) {
-    var contentType = require(Represent.contenTypesFolder + "/" + file);
-    Represent.contentTypes[contentType.key] = contentType;
+var config = {};
+var represent = require(root + '/index').Represent(config);
+var Test = require('tap').test;
+var Util = require('util');
+represent.contenTypesFolder = root + '/lib/contentTypes';
+represent.templatesRoot = root + '/tests/default/';
+represent.layoutRoot = root + '/tests/default/';
+represent.contentTypes = {};
+Fs.readdirSync(represent.contenTypesFolder).forEach(function(file) {
+    var contentType = require(represent.contenTypesFolder + "/" + file);
+    represent.contentTypes[contentType.key] = contentType;
 });
-Web.hooks.push(require(root + '/lib/hook'));
-var Resource = function(endpoints){
+Web.hooks.push(require(root + '/lib/hook')(represent));
+
+(function setupResourceEndpoints(endpoints){
   var self = {
     header: {}
     , layout: 'default'
@@ -45,28 +50,33 @@ var Resource = function(endpoints){
     , header: self.header
     , layout: self.layout
   });
-};
-describe('GIVEN that I am a user', function(){
-    it('WHEN I include a file extension in the URL with query params, THEN the response content type should be correct for the file extension', shouldMatchUrlExtensionWithQueryParams);
-    it('WHEN I request posts.json, THEN the response content type header is set to application/json', shouldReturnJsonContentType);
-    it('WHEN I request posts.html, THEN I get the response content type header is set to text/html', shouldReturnHtmlContentType);
-    it('WHEN I request posts.phtml, THEN I get the response content type header is set to text/html', shouldReturnPartialHtmlContentType);
-    it('WHEN I request posts.xml, THEN I get the response content type header is set to applicatin/xml', shouldReturnXmlContentType);
-    it('WHEN I request posts.atom, THEN I get the response content type header is set to applicatin/atom+xml', shouldBeAtomContentType);
-    it('WHEN I request posts.rss, THEN I get the response content type header is set to applicatin/rss+xml', shouldBeRssContentType);
+})(represent.endpoints);
+
+Test('GIVEN that I am a user', function(t){
+    shouldMatchUrlExtensionWithQueryParams(t, 'WHEN I include a file extension in the URL with query params, THEN the response content type should be correct for the file extension');
+    shouldReturnJsonContentType(t, 'WHEN I request posts.json, THEN the response content type header is set to application/json');
+    shouldReturnHtmlContentType(t, 'WHEN I request posts.html, THEN I get the response content type header is set to text/html');
+    shouldReturnPartialHtmlContentType(t, 'WHEN I request posts.phtml, THEN I get the response content type header is set to text/html');
+    shouldReturnXmlContentType(t, 'WHEN I request posts.xml, THEN I get the response content type header is set to applicatin/xml');
+    shouldBeAtomContentType(t, 'WHEN I request posts.atom, THEN I get the response content type header is set to applicatin/atom+xml');
+    shouldBeRssContentType(t, 'WHEN I request posts.rss, THEN I get the response content type header is set to applicatin/rss+xml');
+	t.end();
 });
-describe('As a user', function(){
-    it('I want posts as HTML so that I can read them in a web browser', shouldBeInHtml);
+Test('GIVEN that I am a browser', function(t){
+    notFoundRequest(t, "WHEN I send a request for a resource that doesn't exist, THEN I get a 404 response");
+    notFoundHtmlRequest(t, "WHEN I send a request for a resource with an html file extension, THEN the response Content-Type is text/html");
+    notFoundHtmlRequestWithQueryString(t, "WHEN I send a request for a resource with an html file extension AND a query string, THEN the response Content-Type is still text/html");
+    requestPostsInHtml(t, "WHEN I request posts, THEN the response Content-Type is HTML AND I get a list of posts");
+    postRequest(t, "WHEN I send a POST request, THEN I get a 201 response");
+	t.end();
 });
-describe('GIVEN that I am a browser', function(){
-    it("WHEN I send a request for a resource that doesn't exist, THEN I get a 404 response", notFoundRequest);
-    it("WHEN I send a request for a resource with an html file extension, THEN the response Content-Type is text/html", notFoundHtmlRequest);
-    it("WHEN I send a request for a resource with an html file extension AND a query string, THEN the response Content-Type is still text/html", notFoundHtmlRequestWithQueryString);
-    it("WHEN I request posts, THEN the response Content-Type is HTML AND I get a list of posts", requestPostsInHtml);
-    it("WHEN I send a POST request, THEN I get a 201 response", postRequest);
+Test('GIVEN that I am the server', function(t){
+	fooBarCookie(t, "WHEN I set a cookie value foo=bar in the response, THEN the response cookie object has foo = bar");
+	t.end();
 });
-describe('GIVEN that I am the server', function(){
-  it("WHEN I set a cookie value foo=bar in the response, THEN the response cookie object has foo = bar", fooBarCookie);
+Test('As a user', function(t){
+    shouldBeInHtml(t, 'I want posts as HTML so that I can read them in a web browser');
+	t.end();
 });
 function mockResponse(){
     var response = new InMemoryStream();
@@ -85,17 +95,16 @@ function mockResponse(){
     };
     return response;
 }
-function postRequest(){
+function postRequest(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.html";
     request.method = "post";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 201);
-    Assert.equal(response.headers['Content-Type'], 'text/html', "Should be HTML: " + response.headers['Content-Type']);
+    Assert.equal(response.statusCode, 201, "status code should be 201");
+    t.equal(response.headers['Content-Type'], 'text/html', when);
 }
-function fooBarCookie(){
+function fooBarCookie(t, when){
   var request = new InMemoryStream();
   request.url = "/posts";
   request.headers = {};
@@ -107,13 +116,11 @@ function fooBarCookie(){
       output += buffer.toString();
   });
   response.on('end', function(){
-      Assert.equal(this.statusCode, 200);
-      Assert.equal(this.cookies['foo'], 'bar', "foo should = bar");
+      t.equal(this.cookies['foo'], 'bar', when);
   });
-  Resource(Represent.endpoints);
   Web.request(request, response);
 }
-function shouldBeInHtml(){
+function shouldBeInHtml(t, when){
     var request = new InMemoryStream();
     request.url = "/posts";
     request.headers = {};
@@ -124,117 +131,102 @@ function shouldBeInHtml(){
         output += buffer.toString();
     });
     response.on('end', function(){
-        Assert.equal(this.statusCode, 200);
-        Assert.equal(this.headers['Content-Type'], 'text/html', "should be HTML");
-        Assert(/\<html\>/.test(output), "Should contain \<html\>");
+        Assert.equal(this.headers['Content-Type'], 'text/html');
+		Util.log(when);
+        t.ok(/\<html\>/.test(output), when);
     });
-    Resource(Represent.endpoints);
     Web.request(request, response);
 }
-function shouldMatchUrlExtensionWithQueryParams(){
+function shouldMatchUrlExtensionWithQueryParams(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.json?test=1";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert.equal(response.headers['Content-Type'], 'application/json', "Should be JSON: " + response.headers['Content-Type']);
+    t.equal(response.headers['Content-Type'], 'application/json', when);
 }
-function shouldReturnJsonContentType(){
+function shouldReturnJsonContentType(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.json";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert(response.headers['Content-Type'] === 'application/json', "Should be JSON");
+    t.equal(response.headers['Content-Type'], 'application/json', when);
 }
-function shouldReturnHtmlContentType(){
+function shouldReturnHtmlContentType(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.html";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert(response.headers['Content-Type'] === 'text/html', "Should be HTML");
+    t.ok(response.headers['Content-Type'] === 'text/html', when);
 }
-function shouldReturnPartialHtmlContentType(){
+function shouldReturnPartialHtmlContentType(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.phtml";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert(response.headers['Content-Type'] === 'text/html', "Should be HTML");
+    t.ok(response.headers['Content-Type'] === 'text/html', when);
 }
-function shouldReturnXmlContentType(){
+function shouldReturnXmlContentType(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.xml";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert(response.headers['Content-Type'] === 'application/xml', "Should be XML");
+    t.ok(response.headers['Content-Type'] === 'application/xml', when);
 }
-function shouldBeAtomContentType(){
+function shouldBeAtomContentType(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.atom";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert(response.headers['Content-Type'] === 'application/atom+xml', "Should be ATOM+XML");
+    t.ok(response.headers['Content-Type'] === 'application/atom+xml', when);
 }
-function shouldBeRssContentType(){
+function shouldBeRssContentType(t, when){
     var request = new InMemoryStream();
     request.url = "/posts.rss";
     request.method = "get";
     var response = mockResponse();
-    Resource(Represent.endpoints);
     Web.request(request, response);
-    Assert.equal(response.statusCode, 200);
-    Assert(response.headers['Content-Type'] === 'application/rss+xml', "Should be RSS+XML");
+    t.ok(response.headers['Content-Type'] === 'application/rss+xml', when);
 }
 
-function requestPostsInHtml(){
+function requestPostsInHtml(t, when){
+    var request = new InMemoryStream();
+    request.url = "/notfound.html";
+    request.method = "get";
+    var response = mockResponse();
+    Web.request(request, response);
+    t.ok(response.statusCode === 404, when);
+}
+
+function notFoundRequest(t, when){
     var request = new InMemoryStream();
     request.url = "/notfound.html";
     request.method = "get";
     var response = mockResponse();
     Web.request(request, response);
     Assert(response.statusCode === 404);
+    t.equal(response.headers['Content-Length'], 9, when);
 }
 
-function notFoundRequest(){
+function notFoundHtmlRequest(t, when){
     var request = new InMemoryStream();
     request.url = "/notfound.html";
     request.method = "get";
     var response = mockResponse();
     Web.request(request, response);
-    Assert(response.statusCode === 404);
-    Assert.equal(response.headers['Content-Length'], 9);
+    t.equal(response.headers["Content-Type"], "text/html", when);
 }
 
-function notFoundHtmlRequest(){
-    var request = new InMemoryStream();
-    request.url = "/notfound.html";
-    request.method = "get";
-    var response = mockResponse();
-    Web.request(request, response);
-    Assert.equal(response.headers["Content-Type"], "text/html");
-}
-
-function notFoundHtmlRequestWithQueryString(){
+function notFoundHtmlRequestWithQueryString(t, when){
     var request = new InMemoryStream();
     request.url = "/notfound.html?id=234&something=else";
     request.method = "get";
     var response = mockResponse();
     Web.request(request, response);
-    Assert.equal(response.headers["Content-Type"], "text/html");
+    t.equal(response.headers["Content-Type"], "text/html", when);
 }
